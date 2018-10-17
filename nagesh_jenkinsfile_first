@@ -1,0 +1,23 @@
+node {
+    stage('CheckOut Code ') {
+        git 'https://github.com/sravani9876/VProfile.git'
+    }
+    stage("Build War/Ear") {
+        def mvnHome=tool name: 'maven354', type: 'maven'
+        def mvnCmd="${mvnHome}/bin/mvn"
+        sh "${mvnCmd} clean package"
+    }
+    stage('Store to Nexus Repo') {
+        nexusArtifactUploader artifacts: [[artifactId: '$BUILD_TIMESTAMP',
+        classifier: '', file: 'target/vprofile-v1.war', type: 'war']], 
+        credentialsId: 'nexus_cc', groupId: 'Dev', 
+        nexusUrl: '34.215.120.243:8081/nexus', nexusVersion: 'nexus2',
+        protocol: 'http', repository: 'nagesh_dev_repo', version: '$BUILD_ID'
+
+    }
+    stage('Deploy to tomact') {
+        sshagent(['tomcat_cc']) {
+            sh 'scp -o StrictHostKeyChecking=no target/*.war ubuntu@52.42.48.140:/opt/apache-tomcat-7.0.91/webapps'
+        }
+    }
+}
